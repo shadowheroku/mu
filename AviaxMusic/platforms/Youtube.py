@@ -152,6 +152,116 @@ class YouTubeAPI:
     async def exists(self, link: str, videoid: Union[bool, str] = None):
         if videoid:
             link = self.base + link
+        return re.search(self.regex, link) is not None
+
+    async def url(self, message_1: Message) -> Union[str, None]:
+        messages = [message_1]
+        if message_1.reply_to_message:
+            messages.append(message_1.reply_to_message)
+        
+        for message in messages:
+            if message.entities:
+                for entity in message.entities:
+                    if entity.type == MessageEntityType.URL:
+                        text = message.text or message.caption
+                        return text[entity.offset:entity.offset + entity.length]
+            elif message.caption_entities:
+                for entity in message.caption_entities:
+                    if entity.type == MessageEntityType.TEXT_LINK:
+                        return entity.url
+        return None
+
+    async def details(self, link: str, videoid: Union[bool, str] = None):
+        if videoid:
+            link = self.base + link
+        if "&" in link:
+            link = link.split("&")[0]
+            
+        results = VideosSearch(link, limit=1)
+        result = (await results.next())["result"][0]
+        
+        title = result["title"]
+        duration_min = result["duration"]
+        thumbnail = result["thumbnails"][0]["url"].split("?")[0]
+        vidid = result["id"]
+        duration_sec = 0 if str(duration_min) == "None" else int(time_to_seconds(duration_min))
+        
+        return title, duration_min, duration_sec, thumbnail, vidid
+
+    async def video(self, link: str, videoid: Union[bool, str] = None):
+        if videoid:
+            link = self.base + link
+        if "&" in link:
+            link = link.split("&")[0]
+        
+        # Try video API first
+        try:
+            downloaded_file = await download_video(link)
+            if downloaded_file:
+                return 1, downloaded_file
+        except Exception as e:
+            print(f"Video API failed: {e}")
+        
+        # Fallback to direct streaming if API fails
+        try:
+            video_url = f"{VIDEO_API_URL}/get_video/song/{extract_video_id(link) or link.split('v=')[-1].split('&')[0]}"
+            if API_KEY:
+                video_url += f"?api={API_KEY}"
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(video_url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("status") == "done" and data.get("link"):
+                            return 1, data["link"]
+            
+            return 0, "Failed to get video URL"
+        except Exception as e:
+            print(f"Video URL fetch failed: {e}")
+            return 0, str(e)
+
+    async def download(
+        self,
+        link: str,
+        mystic,
+        video: Union[bool, str] = None,
+        videoid: Union[bool, str] = None,
+        songaudio: Union[bool, str] = None,
+        songvideo: Union[bool, str] = None,
+        format_id: Union[bool, str] = None,
+        title: Union[bool, str] = None,
+    ) -> str:
+        if videoid:
+            link = self.base + link
+        
+        if songvideo or songaudio:
+            # Handle song downloads
+            file_path = await download_song(link)
+            return (file_path, True) if file_path else (None, None)
+        elif video:
+            # Handle video downloads
+            result, downloaded_file = await self.video(link)
+            if result == 1:
+                if downloaded_file.startswith(('http://', 'https://')):
+                    return downloaded_file, False  # Streaming URL
+                else:
+                    return downloaded_file, True  # Local file
+            return None, None
+        else:
+            # Default to audio download
+            file_path = await download_song(link)
+            return (file_path, True) if file_path else (None, None)
+            
+    def __init__(self):
+        self.base = "https://www.youtube.com/watch?v="
+        self.regex = r"(?:youtube\.com|youtu\.be)"
+        self.status = "https://www.youtube.com/oembed?url="
+        self.listbase = "https://youtube.com/playlist?list="
+        self.reg = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+    async def exists(self, link: str, videoid: Union[bool, str] = None):
+        if videoid:
+            link = self.base + link
         if re.search(self.regex, link):
             return True
         else:
@@ -527,5 +637,6 @@ class YouTubeAPI:
             direct = True
             downloaded_file = await download_song(link)
         return downloaded_file, direct
+
 
 
