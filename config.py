@@ -11,7 +11,7 @@ API_ID = int(getenv("API_ID" ,"23212132"))
 API_HASH = getenv("API_HASH" ,"1c17efa86bdef8f806ed70e81b473c20")
 
 # Get your token from @BotFather on Telegram.
-BOT_TOKEN = getenv("BOT_TOKEN" , "8463253997:AAEUAKGWXKCnx-6TXllnmZmc60cgptPl0vg")
+BOT_TOKEN = getenv("BOT_TOKEN" , "8013665655:AAEdJiyyXhVtgBBUoCFTbs3kA5xX6EYjKjc")
 
 # Get your mongo url from cloud.mongodb.com
 MONGO_DB_URI = getenv("MONGO_DB_URI", "mongodb+srv://ryumasgod:ryumasgod@cluster0.ojfkovp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
@@ -121,6 +121,7 @@ if SUPPORT_GROUP:
         raise SystemExit(
             "[ERROR] - Your SUPPORT_GROUP url is wrong. Please ensure that it starts with https://"
         )
+
 
 
 
