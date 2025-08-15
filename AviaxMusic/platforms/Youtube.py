@@ -17,7 +17,7 @@ import logging
 import aiohttp
 import config
 from config import API_URL, VIDEO_API_URL, API_KEY
-
+from typing import Optional
 
 import asyncio
 import os
@@ -527,4 +527,5 @@ class YouTubeAPI:
             direct = True
             downloaded_file = await download_song(link)
         return downloaded_file, direct
+
 
